@@ -94,19 +94,20 @@ bool ICUPreprocessor_c::Init ( CSphString & sError )
 
 	UErrorCode tStatus = U_ZERO_ERROR;
 	m_pBreakIterator = std::unique_ptr<icu::BreakIterator> { icu::BreakIterator::createWordInstance ( icu::Locale::getChinese(), tStatus ) };
-	if ( U_FAILURE(tStatus) )
+	
+	if ( U_FAILURE(tStatus) || !m_pBreakIterator )
 	{
-		sError.SetSprintf( "Unable to initialize ICU break iterator: %s", u_errorName(tStatus) );
-		if ( tStatus==U_MISSING_RESOURCE_ERROR )
-			sError.SetSprintf ( "%s. Make sure ICU data file is accessible (using '%s' folder)", sError.cstr(), g_sICUDir.cstr() );
-
+		if ( U_FAILURE(tStatus) )
+		{
+			sError.SetSprintf( "Unable to initialize ICU break iterator: %s", u_errorName(tStatus) );
+			if ( tStatus==U_MISSING_RESOURCE_ERROR )
+				sError.SetSprintf ( "%s. Make sure ICU data file is accessible (using '%s' folder)", sError.cstr(), g_sICUDir.cstr() );
+		}
+		else
+		{
+			sError = "Unable to initialize ICU break iterator";
+		}
 		return false;			
-	}
-
-	if ( !m_pBreakIterator )
-	{
-		sError = "Unable to initialize ICU break iterator";
-		return false;
 	}
 
 	return true;
@@ -161,13 +162,16 @@ bool ICUPreprocessor_c::NeedAddSpace ( const BYTE * pToken, const CSphVector<BYT
 	if ( !iResLen )
 		return false;
 
-	if ( bQuery && ( IsSpecialQueryCode ( dOut[iResLen - 1] ) || IsSpecialQueryCode ( *pToken ) ) )
+	BYTE lastChar = dOut[iResLen - 1];
+	BYTE firstChar = *pToken;
+	
+	if ( bQuery && ( IsSpecialQueryCode (lastChar) || IsSpecialQueryCode (firstChar) ) )
 		return false;
 
-	if ( IsBlendChar( dOut[iResLen - 1] ) || IsBlendChar ( *pToken ) )
+	if ( IsBlendChar(lastChar) || IsBlendChar (firstChar) )
 		return false;
 
-	return !sphIsSpace ( dOut[iResLen-1] ) && !sphIsSpace ( *pToken );
+	return !sphIsSpace (lastChar) && !sphIsSpace (firstChar);
 }
 
 
