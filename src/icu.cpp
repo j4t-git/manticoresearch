@@ -115,11 +115,8 @@ bool ICUPreprocessor_c::Init ( CSphString & sError )
 
 bool ICUPreprocessor_c::Process ( const BYTE * pBuffer, int iLength, CSphVector<BYTE> & dOut, bool bQuery )
 {
-	if ( !pBuffer || !iLength )
-		return false;
-
-	if ( !sphDetectChinese ( pBuffer, iLength ) )
-		return false;
+    if ( !pBuffer || !iLength || !sphDetectChinese ( pBuffer, iLength ) )
+        return false;
 
 	dOut.Resize(0);
 
@@ -128,11 +125,13 @@ bool ICUPreprocessor_c::Process ( const BYTE * pBuffer, int iLength, CSphVector<
 	bool bWasChineseCode = false;
 	const BYTE * pChunkStart = pBuffer;
 	bool bFirstCode = true;
+	
 	while ( pBuffer<pBufferMax )
 	{
 		const BYTE * pTmp = pBuffer;
 		int iCode = sphUTF8Decode ( pBuffer );
-		bool bIsChineseCode = sphIsChineseCode(iCode);
+		bool bIsChineseCode = sphIsChineseCode( iCode );
+		
 		if ( !bFirstCode && bWasChineseCode!=bIsChineseCode )
 		{
 			AddTextChunk ( pChunkStart, int ( pTmp-pChunkStart ), dOut, bWasChineseCode, bQuery );
